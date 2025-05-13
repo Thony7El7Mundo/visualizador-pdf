@@ -3,77 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sube y Visualiza tu PDF</title>
+    <title>Visualizador de PDF</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            background: #f4f4f4;
             margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
-        .container {
-            width: 80%;
-            margin: auto;
             padding: 20px;
         }
-        #pdfViewer {
-            margin-top: 20px;
+        h1 {
+            text-align: center;
+        }
+        #pdfViewer canvas {
+            display: block;
+            margin: 10px auto;
+            border: 1px solid #ccc;
+        }
+        .upload-container {
+            text-align: center;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Sube tu archivo PDF para visualizarlo</h1>
-        <form id="uploadForm" action="#" method="post" enctype="multipart/form-data">
-            <input type="file" id="pdfFile" accept="application/pdf">
-            <button type="button" onclick="mostrarPDF()">Subir PDF</button>
-        </form>
-
-        <div id="pdfViewer">
-            <!-- Aquí se mostrará el PDF -->
-        </div>
+    <h1>Visualizador de Archivos PDF</h1>
+    <div class="upload-container">
+        <input type="file" id="pdfFile" accept="application/pdf">
+        <button onclick="mostrarPDF()">Subir PDF</button>
     </div>
+    <div id="pdfViewer"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
     <script>
-        function mostrarPDF() {
-            const archivoInput = document.getElementById('pdfFile');
-            const archivo = archivoInput.files[0];
-            
-            if (archivo && archivo.type === "application/pdf") {
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    const pdfData = new Uint8Array(e.target.result);
-                    const pdfjsLib = window['pdfjs-dist/build/pdf'];
-
-                    pdfjsLib.getDocument(pdfData).promise.then(function(pdf) {
-                        console.log('PDF cargado');
-                        pdf.getPage(1).then(function(page) {
-                            const scale = 1.5;
-                            const viewport = page.getViewport({ scale: scale });
-                            
-                            const canvas = document.createElement('canvas');
-                            const context = canvas.getContext('2d');
-                            canvas.height = viewport.height;
-                            canvas.width = viewport.width;
-
-                            page.render({
-                                canvasContext: context,
-                                viewport: viewport
-                            });
-
-                            const pdfViewer = document.getElementById('pdfViewer');
-                            pdfViewer.innerHTML = ''; // Limpiar antes de mostrar el nuevo PDF
-                            pdfViewer.appendChild(canvas);
-                        });
-                    });
-                };
-                
-                reader.readAsArrayBuffer(archivo);
-            } else {
-                alert("Por favor, sube un archivo PDF.");
+        async function mostrarPDF() {
+            const archivo = document.getElementById('pdfFile').files[0];
+            if (!archivo || archivo.type !== 'application/pdf') {
+                alert("Por favor, selecciona un archivo PDF válido.");
+                return;
             }
+
+            const lector = new FileReader();
+            lector.onload = async function (e) {
+                const pdfData = new Uint8Array(e.target.result);
+                const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+
+                const visor = document.getElementById('pdfViewer');
+                visor.innerHTML = ''; // Limpiar visor
+
+                for (let num = 1; num <= pdf.numPages; num++) {
+                    const pagina = await pdf.getPage(num);
+                    const escala = 1.2;
+                    const viewport = pagina.getViewport({ scale: escala });
+
+                    const canvas = document.createElement('canvas');
+                    const contexto = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+
+                    await pagina.render({
+                        canvasContext: contexto,
+                        viewport: viewport
+                    }).promise;
+
+                    visor.appendChild(canvas);
+                }
+            };
+
+            lector.readAsArrayBuffer(archivo);
         }
     </script>
 </body>
